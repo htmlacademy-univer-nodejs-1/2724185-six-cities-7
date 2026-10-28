@@ -1,6 +1,7 @@
 import {inject, injectable} from 'inversify';
-import type {User} from '../../types/index.js';
+import type {Types} from 'mongoose';
 import {Component} from '../../shared/types/component.js';
+import type {CreateUserDto} from './dto/create-user.dto.js';
 import type {UserDocument, UserModelType} from './user.model.js';
 import type {UserService} from './user-service.interface.js';
 
@@ -18,7 +19,23 @@ export class DefaultUserService implements UserService {
     return this.userModel.findOne({email}).exec();
   }
 
-  public async create(data: User): Promise<UserDocument> {
-    return this.userModel.create(data);
+  public async create(data: CreateUserDto): Promise<UserDocument> {
+    return this.userModel.create({...data, favoriteOffers: []});
+  }
+
+  public async addFavoriteOffer(userId: string, offerId: Types.ObjectId): Promise<UserDocument | null> {
+    return this.userModel.findByIdAndUpdate(
+      userId,
+      {$addToSet: {favoriteOffers: offerId}},
+      {new: true},
+    ).exec();
+  }
+
+  public async removeFavoriteOffer(userId: string, offerId: Types.ObjectId): Promise<UserDocument | null> {
+    return this.userModel.findByIdAndUpdate(
+      userId,
+      {$pull: {favoriteOffers: offerId}},
+      {new: true},
+    ).exec();
   }
 }

@@ -1,11 +1,9 @@
-import type {Types} from 'mongoose';
-import type {Offer} from '../../types/index.js';
-
-export type CreateOfferDto = Omit<Offer, 'author'> & {
-  author: Types.ObjectId;
-};
+import type {CreateOfferDto} from './dto/create-offer.dto.js';
 
 export interface OfferEntity extends CreateOfferDto {
+  commentCount: number;
+  isFavorite: boolean;
+  rating: number;
   createdAt: Date;
   updatedAt: Date;
 }

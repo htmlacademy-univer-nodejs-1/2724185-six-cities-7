@@ -7,6 +7,7 @@ const userSchema = new Schema<UserEntity>({
   avatarPath: {type: String},
   password: {type: String, required: true},
   type: {type: String, enum: ['regular', 'pro'], required: true},
+  favoriteOffers: [{type: Schema.Types.ObjectId, ref: 'Offer'}],
 }, {
   collection: 'users',
   timestamps: true,

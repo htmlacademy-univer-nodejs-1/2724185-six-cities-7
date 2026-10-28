@@ -14,6 +14,9 @@ import {UserModel, type UserModelType} from './modules/user/user.model.js';
 import type {UserService} from './modules/user/user-service.interface.js';
 import {DefaultUserService} from './modules/user/default-user.service.js';
 import {ImportCommand} from './cli/import.command.js';
+import {CommentModel, type CommentModelType} from './modules/comment/comment.model.js';
+import type {CommentService} from './modules/comment/comment-service.interface.js';
+import {DefaultCommentService} from './modules/comment/default-comment.service.js';
 
 export function createContainer(): Container {
   const container = new Container();
@@ -22,6 +25,8 @@ export function createContainer(): Container {
   container.bind<Logger>(Component.Logger).to(PinoLogger).inSingletonScope();
   container.bind<Config>(Component.Config).to(RestConfig).inSingletonScope();
   container.bind<DatabaseClient>(Component.DatabaseClient).to(MongoDatabaseClient).inSingletonScope();
+  container.bind<CommentModelType>(Component.CommentModel).toConstantValue(CommentModel);
+  container.bind<CommentService>(Component.CommentService).to(DefaultCommentService).inSingletonScope();
   container.bind<OfferModelType>(Component.OfferModel).toConstantValue(OfferModel);
   container.bind<OfferService>(Component.OfferService).to(DefaultOfferService).inSingletonScope();
   container.bind<UserModelType>(Component.UserModel).toConstantValue(UserModel);

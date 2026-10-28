@@ -1,6 +1,8 @@
 export const Component = {
   Application: Symbol.for('Application'),
   Config: Symbol.for('Config'),
+  CommentModel: Symbol.for('CommentModel'),
+  CommentService: Symbol.for('CommentService'),
   DatabaseClient: Symbol.for('DatabaseClient'),
   ImportCommand: Symbol.for('ImportCommand'),
   Logger: Symbol.for('Logger'),
