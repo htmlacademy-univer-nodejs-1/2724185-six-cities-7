@@ -7,7 +7,9 @@ import type {Config} from './config.interface.js';
 export type RestConfigSchema = {
   port: number;
   dbHost: string;
+  dbUri: string;
   salt: string;
+  jwtSecret: string;
 };
 
 const schema: Schema<RestConfigSchema> = {
@@ -22,6 +24,24 @@ const schema: Schema<RestConfigSchema> = {
     format: 'ipaddress',
     env: 'DB_HOST',
     default: null,
+  },
+  dbUri: {
+    doc: 'URI подключения к MongoDB',
+    format: String,
+    env: 'DB_URI',
+    default: 'mongodb://admin:test@127.0.0.1:27017/six-cities?authSource=admin',
+    sensitive: true,
+  },
+  jwtSecret: {
+    doc: 'Секрет подписи JWT',
+    format: (value: string): void => {
+      if (typeof value !== 'string' || value.trim().length === 0) {
+        throw new Error('JWT_SECRET не должен быть пустым.');
+      }
+    },
+    env: 'JWT_SECRET',
+    default: null,
+    sensitive: true,
   },
   salt: {
     doc: 'Соль для хеширования паролей',

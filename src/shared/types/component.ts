@@ -1,4 +1,5 @@
 export const Component = {
+  AuthService: Symbol.for('AuthService'),
   Application: Symbol.for('Application'),
   Config: Symbol.for('Config'),
   CommentModel: Symbol.for('CommentModel'),
@@ -6,6 +7,8 @@ export const Component = {
   DatabaseClient: Symbol.for('DatabaseClient'),
   ImportCommand: Symbol.for('ImportCommand'),
   Logger: Symbol.for('Logger'),
+  OfferController: Symbol.for('OfferController'),
+  UserController: Symbol.for('UserController'),
   OfferModel: Symbol.for('OfferModel'),
   OfferService: Symbol.for('OfferService'),
   UserModel: Symbol.for('UserModel'),

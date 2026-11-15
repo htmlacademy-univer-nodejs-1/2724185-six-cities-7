@@ -1,3 +1,4 @@
+import {hashPassword} from '../../shared/libs/auth/password.js';
 import {inject, injectable} from 'inversify';
 import type {Types} from 'mongoose';
 import {Component} from '../../shared/types/component.js';
@@ -20,7 +21,7 @@ export class DefaultUserService implements UserService {
   }
 
   public async create(data: CreateUserDto): Promise<UserDocument> {
-    return this.userModel.create({...data, favoriteOffers: []});
+    return this.userModel.create({...data, password: hashPassword(data.password), favoriteOffers: []});
   }
 
   public async addFavoriteOffer(userId: string, offerId: Types.ObjectId): Promise<UserDocument | null> {
