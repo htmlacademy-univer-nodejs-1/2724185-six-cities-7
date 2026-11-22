@@ -45,6 +45,10 @@ export class AuthService {
     return user;
   }
 
+  public async getCurrentOrAnonymous(request: Request): Promise<UserDocument> {
+    return await this.getUser(request, false) ?? this.users.getAnonymous();
+  }
+
   public async requireUser(request: Request): Promise<UserDocument> {
     const user = await this.getUser(request);
     if (!user) {

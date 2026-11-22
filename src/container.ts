@@ -1,3 +1,4 @@
+import {CommentController} from './modules/comment/comment.controller.js';
 import {AuthService} from './shared/libs/auth/auth.service.js';
 import {OfferController} from './modules/offer/offer.controller.js';
 import {UserController} from './modules/user/user.controller.js';
@@ -24,6 +25,7 @@ import {DefaultCommentService} from './modules/comment/default-comment.service.j
 export function createContainer(): Container {
   const container = new Container();
 
+  container.bind<CommentController>(Component.CommentController).to(CommentController).inSingletonScope();
   container.bind<AuthService>(Component.AuthService).to(AuthService).inSingletonScope();
   container.bind<OfferController>(Component.OfferController).to(OfferController).inSingletonScope();
   container.bind<UserController>(Component.UserController).to(UserController).inSingletonScope();

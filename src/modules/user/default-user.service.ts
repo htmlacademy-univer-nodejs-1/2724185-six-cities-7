@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import {hashPassword} from '../../shared/libs/auth/password.js';
 import {inject, injectable} from 'inversify';
 import type {Types} from 'mongoose';
@@ -11,6 +12,14 @@ export class DefaultUserService implements UserService {
   constructor(
     @inject(Component.UserModel) private readonly userModel: UserModelType,
   ) {}
+
+  public async getAnonymous(): Promise<UserDocument> {
+    return this.userModel.findOneAndUpdate(
+      {_id: '000000000000000000000001'},
+      {$setOnInsert: {name: 'Гость', email: 'anonymous@invalid.local', password: hashPassword(crypto.randomUUID()), type: 'regular', favoriteOffers: []}},
+      {upsert: true, new: true},
+    ).exec();
+  }
 
   public async findById(id: string): Promise<UserDocument | null> {
     return this.userModel.findById(id).exec();

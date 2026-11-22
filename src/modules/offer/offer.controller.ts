@@ -3,7 +3,10 @@ import type {Request, Response} from 'express';
 import type {ParamsDictionary} from 'express-serve-static-core';
 import {plainToInstance} from 'class-transformer';
 import {StatusCodes} from 'http-status-codes';
-import {Types} from 'mongoose';
+import {ValidateParamsMiddleware} from '../../shared/libs/rest/middleware/validate-params.middleware.js';
+import {ValidateBodyMiddleware} from '../../shared/libs/rest/middleware/validate-body.middleware.js';
+import {ValidateObjectIdMiddleware} from '../../shared/libs/rest/middleware/validate-object-id.middleware.js';
+import {cityParamsSchema, createOfferSchema, updateOfferSchema} from '../../shared/libs/rest/validation-schemas.js';
 import {Controller} from '../../shared/libs/rest/controller.js';
 import {HttpError} from '../../shared/libs/rest/exception-filter.js';
 import type {AuthService} from '../../shared/libs/auth/auth.service.js';
@@ -26,14 +29,14 @@ export class OfferController extends Controller {
   ) {
     super();
     this.addRoute({method: 'get', path: '/', handler: this.index});
-    this.addRoute({method: 'post', path: '/', handler: this.create});
+    this.addRoute({method: 'post', path: '/', handler: this.create, middlewares: [new ValidateBodyMiddleware(createOfferSchema)]});
     this.addRoute({method: 'get', path: '/favorites', handler: this.favorites});
-    this.addRoute({method: 'get', path: '/premium/:cityName', handler: this.premium});
-    this.addRoute({method: 'get', path: '/:offerId', handler: this.show});
-    this.addRoute({method: 'patch', path: '/:offerId', handler: this.update});
-    this.addRoute({method: 'delete', path: '/:offerId', handler: this.delete});
-    this.addRoute({method: 'post', path: '/:offerId/favorite', handler: this.addFavorite});
-    this.addRoute({method: 'delete', path: '/:offerId/favorite', handler: this.removeFavorite});
+    this.addRoute({method: 'get', path: '/premium/:cityName', handler: this.premium, middlewares: [new ValidateParamsMiddleware(cityParamsSchema)]});
+    this.addRoute({method: 'get', path: '/:offerId', handler: this.show, middlewares: [new ValidateObjectIdMiddleware('offerId')]});
+    this.addRoute({method: 'patch', path: '/:offerId', handler: this.update, middlewares: [new ValidateObjectIdMiddleware('offerId'), new ValidateBodyMiddleware(updateOfferSchema)]});
+    this.addRoute({method: 'delete', path: '/:offerId', handler: this.delete, middlewares: [new ValidateObjectIdMiddleware('offerId')]});
+    this.addRoute({method: 'post', path: '/:offerId/favorite', handler: this.addFavorite, middlewares: [new ValidateObjectIdMiddleware('offerId')]});
+    this.addRoute({method: 'delete', path: '/:offerId/favorite', handler: this.removeFavorite, middlewares: [new ValidateObjectIdMiddleware('offerId')]});
   }
 
   private async serialize(offer: OfferDocument, user: UserDocument | null): Promise<OfferRdo> {
@@ -46,45 +49,38 @@ export class OfferController extends Controller {
   }
 
   private async getOffer(id: string): Promise<OfferDocument> {
-    const offer = Types.ObjectId.isValid(id) && /^[a-f\d]{24}$/i.test(id) ? await this.offers.findById(id) : null;
+    const offer = await this.offers.findById(id);
     if (!offer) {
       throw new HttpError(StatusCodes.NOT_FOUND, 'Offer not found');
     }
     return offer;
   }
 
-  private assertOwner(offer: OfferDocument, user: UserDocument): void {
-    if (offer.author.toString() !== user.id) {
-      throw new HttpError(StatusCodes.FORBIDDEN, 'Only the author can modify this offer');
-    }
-  }
-
   private async index(request: Request, response: Response): Promise<void> {
-    const user = await this.auth.getUser(request, false);
+    const user = await this.auth.getCurrentOrAnonymous(request);
     this.ok(response, await Promise.all((await this.offers.find()).map((offer) => this.serialize(offer, user))));
   }
 
   private async premium(request: Request, response: Response): Promise<void> {
-    const user = await this.auth.getUser(request, false);
+    const user = await this.auth.getCurrentOrAnonymous(request);
     this.ok(response, await Promise.all((await this.offers.findPremiumByCity(request.params.cityName as CityName)).map((offer) => this.serialize(offer, user))));
   }
 
   private async show(request: Request, response: Response): Promise<void> {
-    const user = await this.auth.getUser(request, false);
+    const user = await this.auth.getCurrentOrAnonymous(request);
     this.ok(response, await this.serialize(await this.getOffer(request.params.offerId), user));
   }
 
   private async create(request: Request<ParamsDictionary, unknown, CreateOfferRequestDto>, response: Response): Promise<void> {
-    const user = await this.auth.requireUser(request);
+    const user = await this.auth.getCurrentOrAnonymous(request);
     const {title, description, city, previewImage, images, isPremium, housingType, roomCount, guestCount, rentPrice, amenities, location} = request.body;
     const offer = await this.offers.create({title, description, city, previewImage, images, isPremium, housingType, roomCount, guestCount, rentPrice, amenities, location, publicationDate: new Date(), author: user._id});
     this.created(response, await this.serialize(offer, user));
   }
 
   private async update(request: Request<ParamsDictionary, unknown, UpdateOfferDto>, response: Response): Promise<void> {
-    const user = await this.auth.requireUser(request);
+    const user = await this.auth.getCurrentOrAnonymous(request);
     const offer = await this.getOffer(request.params.offerId);
-    this.assertOwner(offer, user);
     const {title, description, city, previewImage, images, isPremium, housingType, roomCount, guestCount, rentPrice, amenities, location} = request.body;
     const updates = Object.fromEntries(Object.entries({title, description, city, previewImage, images, isPremium, housingType, roomCount, guestCount, rentPrice, amenities, location}).filter(([, value]) => value !== undefined));
     const updated = await this.offers.updateById(offer.id, updates);
@@ -95,9 +91,7 @@ export class OfferController extends Controller {
   }
 
   private async delete(request: Request, response: Response): Promise<void> {
-    const user = await this.auth.requireUser(request);
     const offer = await this.getOffer(request.params.offerId);
-    this.assertOwner(offer, user);
     if (!await this.offers.deleteById(offer.id)) {
       throw new HttpError(StatusCodes.NOT_FOUND, 'Offer not found');
     }
@@ -105,23 +99,23 @@ export class OfferController extends Controller {
   }
 
   private async favorites(request: Request, response: Response): Promise<void> {
-    const user = await this.auth.requireUser(request);
+    const user = await this.auth.getCurrentOrAnonymous(request);
     this.ok(response, await Promise.all((await this.offers.findFavorites(user.id)).map((offer) => this.serialize(offer, user))));
   }
 
   private async addFavorite(request: Request, response: Response): Promise<void> {
-    const user = await this.auth.requireUser(request);
+    const user = await this.auth.getCurrentOrAnonymous(request);
     const offer = await this.getOffer(request.params.offerId);
     await this.offers.addToFavorites(user.id, offer._id);
-    const updatedUser = await this.auth.requireUser(request);
+    const updatedUser = await this.auth.getCurrentOrAnonymous(request);
     this.ok(response, await this.serialize(offer, updatedUser));
   }
 
   private async removeFavorite(request: Request, response: Response): Promise<void> {
-    const user = await this.auth.requireUser(request);
+    const user = await this.auth.getCurrentOrAnonymous(request);
     const offer = await this.getOffer(request.params.offerId);
     await this.offers.removeFromFavorites(user.id, offer._id);
-    const updatedUser = await this.auth.requireUser(request);
+    const updatedUser = await this.auth.getCurrentOrAnonymous(request);
     this.ok(response, await this.serialize(offer, updatedUser));
   }
 }

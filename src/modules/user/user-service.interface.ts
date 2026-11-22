@@ -3,6 +3,7 @@ import type {CreateUserDto} from './dto/create-user.dto.js';
 import type {UserDocument} from './user.model.js';
 
 export interface UserService {
+  getAnonymous(): Promise<UserDocument>;
   findById(id: string): Promise<UserDocument | null>;
   findByEmail(email: string): Promise<UserDocument | null>;
   create(data: CreateUserDto): Promise<UserDocument>;

@@ -3,6 +3,8 @@ import type {Request, Response} from 'express';
 import type {ParamsDictionary} from 'express-serve-static-core';
 import {plainToInstance} from 'class-transformer';
 import {StatusCodes} from 'http-status-codes';
+import {ValidateBodyMiddleware} from '../../shared/libs/rest/middleware/validate-body.middleware.js';
+import {createUserSchema, loginSchema} from '../../shared/libs/rest/validation-schemas.js';
 import {Controller} from '../../shared/libs/rest/controller.js';
 import {HttpError} from '../../shared/libs/rest/exception-filter.js';
 import {verifyPassword} from '../../shared/libs/auth/password.js';
@@ -21,16 +23,16 @@ export class UserController extends Controller {
     @inject(Component.AuthService) private readonly auth: AuthService,
   ) {
     super();
-    this.addRoute({method: 'post', path: '/register', handler: this.register});
+    this.addRoute({method: 'post', path: '/register', handler: this.create, middlewares: [new ValidateBodyMiddleware(createUserSchema)]});
     this.addRoute({method: 'get', path: '/login', handler: this.checkAuth});
-    this.addRoute({method: 'post', path: '/login', handler: this.login});
+    this.addRoute({method: 'post', path: '/login', handler: this.login, middlewares: [new ValidateBodyMiddleware(loginSchema)]});
   }
 
   private serialize(user: UserDocument): UserRdo {
     return plainToInstance(UserRdo, {...user.toObject(), id: user.id}, {excludeExtraneousValues: true});
   }
 
-  private async register(request: Request<ParamsDictionary, unknown, CreateUserDto>, response: Response): Promise<void> {
+  private async create(request: Request<ParamsDictionary, unknown, CreateUserDto>, response: Response): Promise<void> {
     const {name, email, password, avatarPath, type} = request.body;
     if (await this.users.findByEmail(email)) {
       throw new HttpError(StatusCodes.CONFLICT, 'User already exists');
@@ -56,6 +58,6 @@ export class UserController extends Controller {
   }
 
   private async checkAuth(request: Request, response: Response): Promise<void> {
-    this.ok(response, this.serialize(await this.auth.requireUser(request)));
+    this.ok(response, this.serialize(await this.auth.getCurrentOrAnonymous(request)));
   }
 }

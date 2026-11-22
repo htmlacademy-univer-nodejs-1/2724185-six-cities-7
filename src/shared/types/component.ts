@@ -2,6 +2,7 @@ export const Component = {
   AuthService: Symbol.for('AuthService'),
   Application: Symbol.for('Application'),
   Config: Symbol.for('Config'),
+  CommentController: Symbol.for('CommentController'),
   CommentModel: Symbol.for('CommentModel'),
   CommentService: Symbol.for('CommentService'),
   DatabaseClient: Symbol.for('DatabaseClient'),
